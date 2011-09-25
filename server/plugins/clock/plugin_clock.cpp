@@ -9,7 +9,7 @@
 
 Q_EXPORT_PLUGIN2(plugin_clock, PluginClock)
 
-PluginClock::PluginClock():PluginInterface("clock", "Clock",BunnyPlugin)
+PluginClock::PluginClock():PluginInterface("clock", "Orologio",BunnyPlugin)
 {
 	Cron::Register(this, 60, 0, 0, NULL);
 	// Check available folders
@@ -38,17 +38,18 @@ void PluginClock::OnCron(Bunny *, QVariant)
 		{
 			QString hour = QDateTime::currentDateTime().toString("h");
 			QByteArray file;
+			QDir * dir = GetLocalHTTPFolder();
+			QStringList list;
 			if(voice == "tts")
-				file = TTSManager::CreateNewSound("Il est " + hour + " heure", "julie");
+				file = TTSManager::CreateNewSound("Sono le ore " + hour, "chiara");
 			else
 			{
 				// Fetch available files
-				QDir * dir = GetLocalHTTPFolder();
 				if(dir)
 				{
 					dir->cd(voice);
 					dir->cd(hour);
-					QStringList list = dir->entryList(QDir::Files|QDir::NoDotAndDotDot);
+					list = dir->entryList(QDir::Files|QDir::NoDotAndDotDot);
 					if(list.count())
 					{
 						file = GetBroadcastHTTPPath(QString("%1/%2/%3").arg(voice, hour, list.at(qrand()%list.count())));
@@ -60,12 +61,31 @@ void PluginClock::OnCron(Bunny *, QVariant)
 			}
 
 			if(!file.isNull())
-			{
-				QByteArray message = "MU "+file+"\nPL 3\nMW\n";
+			{	
+            	QByteArray fileR;
+                dir = GetLocalHTTPFolder();
+                if (voice == "tts")
+                	voice = "violet";	// Directory default respiration TTS
+				
+				QString respiration = "respiration";	// Directory respiration
+                if (dir->cd(voice) && dir->cd(respiration))
+                {
+                	list = dir->entryList(QDir::Files|QDir::NoDotAndDotDot);
+                    if(list.count())
+					{	
+                		fileR = GetBroadcastHTTPPath(QString("%1/%2/%3").arg(voice, respiration, list.at(qrand()%list.count())));
+                    }
+                }
+                
+                QByteArray message;
+                if(!fileR.isNull())
+                	message = "MU "+fileR+"\nPL 3\nMW\nMU "+file+"\nPL 3\nMW\nMU "+fileR+"\nPL 3\nMW\n";
+                else
+					message = "MU "+file+"\nPL 3\nMW\n";
+                    
 				b->SendPacket(MessagePacket(message));
 			}
 		}
-
 	}
 }
 
